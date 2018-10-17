@@ -29,9 +29,10 @@ class XiaomiGenericCover(XiaomiDevice, CoverDevice):
 
     def __init__(self, device, name, data_key, xiaomi_hub):
         """Initialize the XiaomiGenericCover."""
-        self._data_key = data_key
         self._pos = 0
         XiaomiDevice.__init__(self, device, name, xiaomi_hub)
+        self._unique_id = slugify("{}-{}".format(self._type, self._sid))
+        self._data_key = data_key
 
     @property
     def current_cover_position(self):
