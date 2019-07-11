@@ -27,10 +27,11 @@ from . import (
     CONF_ADVERTISE_ADDR, CONF_HOSTS, CONF_INTERFACE_ADDR,
     DATA_SERVICE_EVENT, DOMAIN as SONOS_DOMAIN,
     ATTR_ALARM_ID, ATTR_ENABLED, ATTR_INCLUDE_LINKED_ZONES, ATTR_MASTER,
-    ATTR_NIGHT_SOUND, ATTR_SLEEP_TIME, ATTR_SPEECH_ENHANCE, ATTR_TIME,
-    ATTR_VOLUME, ATTR_WITH_GROUP,
-    SERVICE_CLEAR_TIMER, SERVICE_JOIN, SERVICE_RESTORE, SERVICE_SET_OPTION,
-    SERVICE_SET_TIMER, SERVICE_SNAPSHOT, SERVICE_UNJOIN, SERVICE_UPDATE_ALARM)
+    ATTR_NIGHT_SOUND, ATTR_QUEUE_POSITION, ATTR_SLEEP_TIME,
+    ATTR_SPEECH_ENHANCE, ATTR_TIME, ATTR_VOLUME, ATTR_WITH_GROUP,
+    SERVICE_CLEAR_TIMER, SERVICE_JOIN, SERVICE_PLAY_QUEUE, SERVICE_RESTORE,
+    SERVICE_SET_OPTION, SERVICE_SET_TIMER, SERVICE_SNAPSHOT, SERVICE_UNJOIN,
+    SERVICE_UPDATE_ALARM)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         hass.data[DATA_SONOS] = SonosData(hass)
 
     config = hass.data[SONOS_DOMAIN].get('media_player', {})
+    _LOGGER.debug("Reached async_setup_entry, config=%s", config)
 
     advertise_addr = config.get(CONF_ADVERTISE_ADDR)
     if advertise_addr:
@@ -88,35 +90,43 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         def _discovered_player(soco):
             """Handle a (re)discovered player."""
             try:
+                _LOGGER.debug("Reached _discovered_player, soco=%s", soco)
                 entity = _get_entity_from_soco_uid(hass, soco.uid)
 
                 if not entity:
+                    _LOGGER.debug("Adding new entity")
                     hass.add_job(async_add_entities, [SonosEntity(soco)])
                 else:
+                    _LOGGER.debug("Seen %s", entity)
                     hass.add_job(entity.async_seen())
-            except SoCoException:
-                pass
+            except SoCoException as ex:
+                _LOGGER.debug("SoCoException, ex=%s", ex)
 
         if hosts:
             for host in hosts:
                 try:
+                    _LOGGER.debug("Testing %s", host)
                     player = pysonos.SoCo(socket.gethostbyname(host))
                     if player.is_visible:
                         # Make sure that the player is available
                         _ = player.volume
 
                         _discovered_player(player)
-                except (OSError, SoCoException):
+                except (OSError, SoCoException) as ex:
+                    _LOGGER.debug("Exception %s", ex)
                     if now is None:
                         _LOGGER.warning("Failed to initialize '%s'", host)
 
+            _LOGGER.debug("Tested all hosts")
             hass.helpers.event.call_later(DISCOVERY_INTERVAL, _discovery)
         else:
+            _LOGGER.debug("Starting discovery thread")
             pysonos.discover_thread(
                 _discovered_player,
                 interval=DISCOVERY_INTERVAL,
                 interface_addr=config.get(CONF_INTERFACE_ADDR))
 
+    _LOGGER.debug("Adding discovery job")
     hass.async_add_executor_job(_discovery)
 
     async def async_service_handle(service, data):
@@ -149,6 +159,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     call = entity.set_alarm
                 elif service == SERVICE_SET_OPTION:
                     call = entity.set_option
+                elif service == SERVICE_PLAY_QUEUE:
+                    call = entity.play_queue
 
                 hass.async_add_executor_job(call, data)
 
@@ -1074,6 +1086,11 @@ class SonosEntity(MediaPlayerDevice):
 
         if ATTR_SPEECH_ENHANCE in data and self._speech_enhance is not None:
             self.soco.dialog_mode = data[ATTR_SPEECH_ENHANCE]
+
+    @soco_error()
+    def play_queue(self, data):
+        """Start playing the queue."""
+        self.soco.play_from_queue(data[ATTR_QUEUE_POSITION])
 
     @property
     def device_state_attributes(self):

@@ -1,15 +1,16 @@
 """Support for KNX/IP climate devices."""
+from typing import Optional, List
+
 import voluptuous as vol
 
 from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateDevice
 from homeassistant.components.climate.const import (
     HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, HVAC_MODE_HEAT, HVAC_MODE_OFF,
-    PRESET_ECO, PRESET_SLEEP, PRESET_AWAY, PRESET_COMFORT,
-    SUPPORT_PRESET_MODE, SUPPORT_TARGET_TEMPERATURE)
+    HVAC_MODE_COOL, HVAC_MODE_AUTO, PRESET_ECO, PRESET_SLEEP, PRESET_AWAY,
+    PRESET_COMFORT, SUPPORT_PRESET_MODE, SUPPORT_TARGET_TEMPERATURE)
 from homeassistant.const import ATTR_TEMPERATURE, CONF_NAME, TEMP_CELSIUS
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
-from typing import Optional, List
 
 from . import ATTR_DISCOVER_DEVICES, DATA_KNX
 
@@ -43,9 +44,13 @@ DEFAULT_SETPOINT_SHIFT_MAX = 6
 DEFAULT_SETPOINT_SHIFT_MIN = -6
 # Map KNX operation modes to HA modes. This list might not be full.
 OPERATION_MODES = {
-    # Map DPT 201.104 HVAC control modes
+    # Map DPT 201.105 HVAC control modes
+    "Auto": HVAC_MODE_AUTO,
+    "Heat": HVAC_MODE_HEAT,
+    "Cool": HVAC_MODE_COOL,
+    "Off": HVAC_MODE_OFF,
     "Fan only": HVAC_MODE_FAN_ONLY,
-    "Dehumidification": HVAC_MODE_DRY
+    "Dry": HVAC_MODE_DRY
 }
 
 OPERATION_MODES_INV = dict((
@@ -244,7 +249,7 @@ class KNXClimate(ClimateDevice):
         """Return current operation ie. heat, cool, idle."""
         if self.device.supports_on_off and not self.device.is_on:
             return HVAC_MODE_OFF
-        elif self.device.supports_on_off and self.device.is_on:
+        if self.device.supports_on_off and self.device.is_on:
             return HVAC_MODE_HEAT
         if self.device.mode.supports_operation_mode:
             return OPERATION_MODES.get(

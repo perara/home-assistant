@@ -13,16 +13,13 @@ from .const import ATTR_OFFSET, ATTR_VALVE, NEW_SENSOR
 from .deconz_device import DeconzDevice
 from .gateway import get_gateway_from_config_entry
 
-SUPPORT_HVAC = HVAC_MODE_HEAT | HVAC_MODE_OFF
+SUPPORT_HVAC = [HVAC_MODE_HEAT, HVAC_MODE_OFF]
 
 
 async def async_setup_platform(
         hass, config, async_add_entities, discovery_info=None):
     """Old way of setting up deCONZ platforms."""
     pass
-
-
-SUPPORT_HVAC = HVAC_MODE_HEAT | HVAC_MODE_OFF
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -55,10 +52,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class DeconzThermostat(DeconzDevice, ClimateDevice):
     """Representation of a deCONZ thermostat."""
-
-    def __init__(self, device, gateway):
-        """Set up thermostat device."""
-        super().__init__(device, gateway)
 
     @property
     def supported_features(self):
