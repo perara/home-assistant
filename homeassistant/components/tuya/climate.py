@@ -1,26 +1,38 @@
 """Support for the Tuya climate devices."""
 from homeassistant.components.climate import ENTITY_ID_FORMAT, ClimateDevice
 from homeassistant.components.climate.const import (
-    HVAC_MODE_AUTO, HVAC_MODE_COOL, HVAC_MODE_FAN_ONLY, HVAC_MODE_HEAT,
-    SUPPORT_FAN_MODE, SUPPORT_TARGET_TEMPERATURE, HVAC_MODE_OFF)
-from homeassistant.components.fan import SPEED_HIGH, SPEED_LOW, SPEED_MEDIUM
+    FAN_HIGH,
+    FAN_LOW,
+    FAN_MEDIUM,
+    HVAC_MODE_AUTO,
+    HVAC_MODE_COOL,
+    HVAC_MODE_FAN_ONLY,
+    HVAC_MODE_HEAT,
+    HVAC_MODE_OFF,
+    SUPPORT_FAN_MODE,
+    SUPPORT_TARGET_TEMPERATURE,
+)
 from homeassistant.const import (
-    ATTR_TEMPERATURE, PRECISION_WHOLE, TEMP_CELSIUS, TEMP_FAHRENHEIT)
+    ATTR_TEMPERATURE,
+    PRECISION_WHOLE,
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
+)
 
 from . import DATA_TUYA, TuyaDevice
 
-DEVICE_TYPE = 'climate'
+DEVICE_TYPE = "climate"
 
 HA_STATE_TO_TUYA = {
-    HVAC_MODE_AUTO: 'auto',
-    HVAC_MODE_COOL: 'cold',
-    HVAC_MODE_FAN_ONLY: 'wind',
-    HVAC_MODE_HEAT: 'hot',
+    HVAC_MODE_AUTO: "auto",
+    HVAC_MODE_COOL: "cold",
+    HVAC_MODE_FAN_ONLY: "wind",
+    HVAC_MODE_HEAT: "hot",
 }
 
 TUYA_STATE_TO_HA = {value: key for key, value in HA_STATE_TO_TUYA.items()}
 
-FAN_MODES = {SPEED_LOW, SPEED_MEDIUM, SPEED_HIGH}
+FAN_MODES = {FAN_LOW, FAN_MEDIUM, FAN_HIGH}
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -28,7 +40,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     if discovery_info is None:
         return
     tuya = hass.data[DATA_TUYA]
-    dev_ids = discovery_info.get('dev_ids')
+    dev_ids = discovery_info.get("dev_ids")
     devices = []
     for dev_id in dev_ids:
         device = tuya.get_device_by_id(dev_id)
@@ -67,7 +79,7 @@ class TuyaClimateDevice(TuyaDevice, ClimateDevice):
     def temperature_unit(self):
         """Return the unit of measurement used by the platform."""
         unit = self.tuya.temperature_unit()
-        if unit == 'FAHRENHEIT':
+        if unit == "FAHRENHEIT":
             return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
 
@@ -110,7 +122,7 @@ class TuyaClimateDevice(TuyaDevice, ClimateDevice):
     @property
     def fan_modes(self):
         """Return the list of available fan modes."""
-        return self.tuya.fan_modes()
+        return self.tuya.fan_list()
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""

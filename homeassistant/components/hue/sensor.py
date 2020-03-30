@@ -1,10 +1,15 @@
 """Hue sensor entities."""
-from homeassistant.const import (
-    DEVICE_CLASS_ILLUMINANCE, DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS)
-from homeassistant.helpers.entity import Entity
-from homeassistant.components.hue.sensor_base import (
-    GenericZLLSensor, async_setup_entry as shared_async_setup_entry)
+from aiohue.sensors import TYPE_ZLL_LIGHTLEVEL, TYPE_ZLL_TEMPERATURE
 
+from homeassistant.const import (
+    DEVICE_CLASS_ILLUMINANCE,
+    DEVICE_CLASS_TEMPERATURE,
+    TEMP_CELSIUS,
+)
+from homeassistant.helpers.entity import Entity
+
+from .const import DOMAIN as HUE_DOMAIN
+from .sensor_base import SENSOR_CONFIG_MAP, GenericZLLSensor
 
 LIGHT_LEVEL_NAME_FORMAT = "{} light level"
 TEMPERATURE_NAME_FORMAT = "{} temperature"
@@ -12,8 +17,9 @@ TEMPERATURE_NAME_FORMAT = "{} temperature"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Defer sensor setup to the shared sensor module."""
-    await shared_async_setup_entry(
-        hass, config_entry, async_add_entities, binary=False)
+    await hass.data[HUE_DOMAIN][
+        config_entry.entry_id
+    ].sensor_manager.async_register_component("sensor", async_add_entities)
 
 
 class GenericHueGaugeSensorEntity(GenericZLLSensor, Entity):
@@ -46,13 +52,15 @@ class HueLightLevel(GenericHueGaugeSensorEntity):
     def device_state_attributes(self):
         """Return the device state attributes."""
         attributes = super().device_state_attributes
-        attributes.update({
-            "lightlevel": self.sensor.lightlevel,
-            "daylight": self.sensor.daylight,
-            "dark": self.sensor.dark,
-            "threshold_dark": self.sensor.tholddark,
-            "threshold_offset": self.sensor.tholdoffset,
-        })
+        attributes.update(
+            {
+                "lightlevel": self.sensor.lightlevel,
+                "daylight": self.sensor.daylight,
+                "dark": self.sensor.dark,
+                "threshold_dark": self.sensor.tholddark,
+                "threshold_offset": self.sensor.tholdoffset,
+            }
+        )
         return attributes
 
 
@@ -69,3 +77,19 @@ class HueTemperature(GenericHueGaugeSensorEntity):
             return None
 
         return self.sensor.temperature / 100
+
+
+SENSOR_CONFIG_MAP.update(
+    {
+        TYPE_ZLL_LIGHTLEVEL: {
+            "platform": "sensor",
+            "name_format": LIGHT_LEVEL_NAME_FORMAT,
+            "class": HueLightLevel,
+        },
+        TYPE_ZLL_TEMPERATURE: {
+            "platform": "sensor",
+            "name_format": TEMPERATURE_NAME_FORMAT,
+            "class": HueTemperature,
+        },
+    }
+)
